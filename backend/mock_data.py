@@ -5,10 +5,13 @@
 
 from schemas import (
     AnalysisReport,
+    Audience,
+    AudiencePreview,
     DataSource,
     DayHighlight,
     FunnelStage,
     Kpi,
+    Report,
     TimePoint,
 )
 
@@ -25,6 +28,158 @@ DATA_SOURCES: list[DataSource] = [
     DataSource(id="search_console", name="Search Console", auth_kind="oauth"),
     DataSource(id="boxful", name="Boxful", auth_kind="api_key"),
 ]
+
+
+# 頁二:分析中心報表清單(記憶體種子)
+MOCK_REPORTS: list[Report] = [
+    Report(
+        id="r001",
+        name="VITABOX 廣告週報",
+        sources=["Meta", "Google"],
+        updated_at="2026-06-10 09:00",
+        frequency="每週",
+        model="claude-opus-4-8",
+        prompt="比較 Meta 與 Google 的 ROAS,標記變動超過 20% 的指標,並針對浪費花費提出排除關鍵字建議。",
+    ),
+    Report(
+        id="r002",
+        name="GA4 流量月報",
+        sources=["GA4"],
+        updated_at="2026-06-01 08:00",
+        frequency="每月",
+        model="claude-sonnet-4-6",
+        prompt=None,
+    ),
+    Report(
+        id="r003",
+        name="全通路綜合分析",
+        sources=["Meta", "Google", "GA4"],
+        updated_at="2026-06-12 10:30",
+        frequency="手動",
+        model="claude-opus-4-8",
+        prompt="彙整三平台成效,找出漏斗最大流失點,並給出 3 個可執行的優化建議。",
+    ),
+]
+
+
+# 受眾管理清單(記憶體種子)
+MOCK_AUDIENCES: list[Audience] = [
+    Audience(
+        id="a001",
+        name="90天未回購保健品女性 30-45",
+        method="natural_language",
+        count=2847,
+        created_at="2026-06-10 14:00",
+        frequency="每週",
+        channels=[],
+    ),
+    Audience(
+        id="a002",
+        name="高 RFM 分群 VIP 客",
+        method="structured",
+        count=512,
+        created_at="2026-06-08 10:00",
+        frequency="每月",
+        channels=[],
+    ),
+]
+
+
+# 分群人數對照(智慧分群 + RFM),本期 mock。規格已給者用之,未給者用示範值。
+SEGMENT_COUNTS: dict[str, int] = {
+    # 智慧分群
+    "top_core": 8420,
+    "top_dormant": 3110,
+    "active": 21560,
+    "ready_repurchase": 18230,
+    "sleeping": 26740,
+    "new_buyer": 24965,
+    "potential_repurchase": 12480,
+    "lost": 45620,
+    "engaged": 9870,
+    # RFM 9 RANK
+    "rfm_important_value": 6820,
+    "rfm_high_potential": 9430,
+    "rfm_important_keep": 31200,
+    "rfm_high_attention": 15006,
+    "rfm_low_attention": 54531,
+    "rfm_high_wakeup": 24095,
+    "rfm_low_wakeup": 76102,
+    "rfm_high_value_new": 24965,
+    "rfm_low_value_new": 45620,
+}
+
+
+def build_audience_preview(segment: str | None = None) -> AudiencePreview:
+    """受眾預覽(本期固定 mock)。Phase 2 由 BigQuery/LLM 解析條件估算。
+
+    若帶 segment(智慧分群 / RFM),回該分群的 mock 人數。
+    """
+    if segment and segment in SEGMENT_COUNTS:
+        return AudiencePreview(
+            estimated_count=SEGMENT_COUNTS[segment],
+            condition_summary=[f"預設分群:{segment}", "本期人數為示範值"],
+        )
+    return AudiencePreview(
+        estimated_count=2847,
+        condition_summary=[
+            "購買時間:過去 90 天內有訂單",
+            "品項類別:保健品",
+            "回購狀態:90 天內無第二筆訂單",
+            "性別:女性",
+            "年齡:30-45 歲",
+        ],
+    )
+
+
+# 廣告受眾建立的 mock 人數(依通路)
+AD_CHANNEL_COUNTS: dict[str, int] = {"meta": 2410, "google": 1980, "line": 3120}
+
+
+def build_audience_report() -> "AudienceReport":
+    """受眾報表 mock(七項指標 + 每日明細)。Phase 2 由真實發送數據彙整。"""
+    from schemas import AudienceReport, ReportDailyRow
+
+    dates = [f"2026-06-{d:02d}" for d in range(1, 8)]
+    sent_daily = [1200, 1340, 1180, 1520, 1610, 980, 1450]
+    daily = [
+        ReportDailyRow(
+            date=d,
+            sent=s,
+            open_rate=round(28 + i * 0.6, 1),
+            click_rate=round(4.2 + i * 0.15, 1),
+            fail_rate=round(1.8 - i * 0.05, 1),
+            unsubscribe_rate=round(0.6 - i * 0.02, 2),
+            bounce_rate=round(1.2 - i * 0.03, 2),
+            sales=s * 38,
+        )
+        for i, (d, s) in enumerate(zip(dates, sent_daily))
+    ]
+    return AudienceReport(
+        sent=sum(sent_daily),
+        open_rate=30.4,
+        click_rate=4.9,
+        fail_rate=1.6,
+        unsubscribe_rate=0.52,
+        bounce_rate=1.05,
+        sales=sum(r.sales for r in daily),
+        daily=daily,
+    )
+
+
+def build_nl_parse() -> "NlParseResult":
+    """自然語言解析 mock(固定回葉黃素例)。Phase 2 改由 LLM 解析。"""
+    from schemas import NlParseResult, ParsedCondition
+
+    return NlParseResult(
+        conditions=[
+            ParsedCondition(include=True, field="曾購買產品", operator="期間內購買", value="葉黃素 · 過去 30 天"),
+        ],
+        condition_summary=[
+            "訂單行為:過去 30 天內購買「葉黃素」",
+        ],
+        estimated_count=1860,
+    )
 
 
 def build_analysis_report(

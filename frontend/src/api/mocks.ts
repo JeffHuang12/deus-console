@@ -2,19 +2,26 @@
 // 讓 GitHub Pages 靜態網站在沒有後端的情況下也能完整操作。
 // 僅當 VITE_DEMO_MODE=true 時啟用(見 client.ts)。
 import type {
+  AdBuildRequest,
+  AdChannelResult,
   AnalysisReport,
+  Audience,
+  AudiencePreview,
+  AudienceReport,
+  AudienceSettings,
   BindingActionResult,
+  PushPayload,
   ChatMessage,
   ChatResponse,
-  CompareMode,
   DataSource,
-  DatePreset,
   McpServer,
   McpServerCreate,
   MonitorRule,
   MonitorRuleCreate,
-  ReportConfig,
-  SavedReport,
+  NlParseResult,
+  Report,
+  ReportDetail,
+  ReportForm,
 } from "./types";
 
 const delay = <T>(data: T): Promise<T> =>
@@ -39,31 +46,14 @@ let shopline: BindingActionResult = {
   message: "尚未綁定",
 };
 
-// --- 頁二:分析報告 ---
-const PRESET_LABEL: Record<DatePreset, string> = {
-  last_7d: "過去 7 天",
-  last_14d: "過去 14 天",
-  last_week: "上週(一至日)",
-  this_month: "本月",
-  last_month: "上個月",
-  custom: "自訂區間",
-};
-const COMPARE_LABEL: Record<CompareMode, string> = {
-  prev_period: "對比前期",
-  yoy: "對比去年同期",
-};
-
-function buildReport(config: ReportConfig): AnalysisReport {
+// --- 頁二:分析報告(報表詳情八區塊,本期固定 mock) ---
+function buildReport(): AnalysisReport {
   const dates = Array.from({ length: 14 }, (_, i) => `2026-05-${String(i + 1).padStart(2, "0")}`);
   const daily = [3200, 2980, 3410, 3650, 2890, 2750, 4120, 4380, 3990, 3550, 3210, 2980, 4510, 4720];
   const trendVals = [2.1, 2.3, 2.0, 2.6, 2.4, 2.2, 2.9, 3.1, 2.8, 2.7, 2.5, 2.4, 3.3, 3.5];
-  const rangeLabel =
-    config.date_preset === "custom" && config.start_date && config.end_date
-      ? `${config.start_date} ~ ${config.end_date}`
-      : PRESET_LABEL[config.date_preset] ?? "過去 7 天";
   return {
-    range_label: rangeLabel,
-    compare_label: COMPARE_LABEL[config.compare_mode] ?? "對比前期",
+    range_label: "過去 7 天",
+    compare_label: "對比前期",
     executive_summary:
       "本期(2026-05-01 至 05-14)整體營收較前期成長 12.4%,主要由 Meta 廣告與 GA4 自然流量帶動。" +
       "漏斗在「加入購物車 → 結帳」環節流失最大,為下一階段優化重點。整體 ROAS 由 2.1 升至 3.5,顯示廣告效率改善。" +
@@ -132,9 +122,42 @@ let servers: McpServer[] = [
 ];
 let serverSeq = 3;
 
-// --- 常用報表 ---
-let saved: SavedReport[] = [];
-let savedSeq = 1;
+// --- 頁二:報表清單 ---
+let reports: Report[] = [
+  { id: "r001", name: "VITABOX 廣告週報", sources: ["Meta", "Google"], updated_at: "2026-06-10 09:00", frequency: "每週", model: "claude-opus-4-8", prompt: "比較 Meta 與 Google 的 ROAS,標記變動超過 20% 的指標,並針對浪費花費提出排除關鍵字建議。" },
+  { id: "r002", name: "GA4 流量月報", sources: ["GA4"], updated_at: "2026-06-01 08:00", frequency: "每月", model: "claude-sonnet-4-6", prompt: null },
+  { id: "r003", name: "全通路綜合分析", sources: ["Meta", "Google", "GA4"], updated_at: "2026-06-12 10:30", frequency: "手動", model: "claude-opus-4-8", prompt: "彙整三平台成效,找出漏斗最大流失點,並給出 3 個可執行的優化建議。" },
+];
+let reportSeq = 4;
+
+function nowStr(): string {
+  const d = new Date();
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+// --- 受眾管理 ---
+const AUDIENCE_SUMMARY = [
+  "購買時間:過去 90 天內有訂單",
+  "品項類別:保健品",
+  "回購狀態:90 天內無第二筆訂單",
+  "性別:女性",
+  "年齡:30-45 歲",
+];
+let audiences: Audience[] = [
+  { id: "a001", name: "90天未回購保健品女性 30-45", method: "natural_language", count: 2847, created_at: "2026-06-10 14:00", frequency: "每週", channels: [] },
+  { id: "a002", name: "高 RFM 分群 VIP 客", method: "structured", count: 512, created_at: "2026-06-08 10:00", frequency: "每月", channels: [] },
+];
+let audienceSeq = 3;
+
+// 分群人數對照(與後端 mock_data.SEGMENT_COUNTS 對齊)
+const SEGMENT_COUNTS: Record<string, number> = {
+  top_core: 8420, top_dormant: 3110, active: 21560, ready_repurchase: 18230,
+  sleeping: 26740, new_buyer: 24965, potential_repurchase: 12480, lost: 45620, engaged: 9870,
+  rfm_important_value: 6820, rfm_high_potential: 9430, rfm_important_keep: 31200,
+  rfm_high_attention: 15006, rfm_low_attention: 54531, rfm_high_wakeup: 24095,
+  rfm_low_wakeup: 76102, rfm_high_value_new: 24965, rfm_low_value_new: 45620,
+};
 
 export const mockApi = {
   listSources: () => delay(sources.map((s) => ({ ...s }))),
@@ -170,34 +193,135 @@ export const mockApi = {
     return delay({ source_id: id, status: "disconnected", message: "已解除綁定" });
   },
 
-  getAnalysis: () =>
-    delay(
-      buildReport({
-        date_preset: "last_7d",
-        start_date: null,
-        end_date: null,
-        sources: [],
-        model: "claude-opus-4-8",
-        prompt: null,
-        compare_mode: "prev_period",
-      })
-    ),
-  runAnalysis: (config: ReportConfig) => delay(buildReport(config)),
-  listSavedReports: () => delay(saved.map((s) => ({ ...s }))),
-  saveReport: (name: string, config: ReportConfig, schedule_daily: boolean) => {
-    const r: SavedReport = {
-      id: savedSeq++,
-      name,
-      config,
-      schedule_daily,
-      created_at: new Date().toISOString(),
+  // 頁二 報表清單
+  getReports: () => delay(reports.map((r) => ({ ...r }))),
+  getReport: (id: string): Promise<ReportDetail> => {
+    const r = reports.find((x) => x.id === id) ?? reports[0];
+    return delay({ ...r, sections: buildReport() });
+  },
+  createReport: (form: ReportForm): Promise<Report> => {
+    const r: Report = {
+      id: `r${String(reportSeq++).padStart(3, "0")}`,
+      name: form.name,
+      sources: form.sources,
+      updated_at: nowStr(),
+      frequency: form.frequency,
+      model: form.model,
+      prompt: form.prompt ?? null,
     };
-    saved.push(r);
+    reports.push(r);
     return delay({ ...r });
   },
-  deleteSavedReport: (id: number) => {
-    saved = saved.filter((s) => s.id !== id);
+  updateReport: (id: string, payload: { prompt: string | null }): Promise<Report> => {
+    const r = reports.find((x) => x.id === id) ?? reports[0];
+    r.prompt = payload.prompt;
+    return delay({ ...r });
+  },
+  runReport: (id: string): Promise<Report> => {
+    const r = reports.find((x) => x.id === id) ?? reports[0];
+    r.updated_at = nowStr();
+    return delay({ ...r });
+  },
+  deleteReport: (id: string) => {
+    reports = reports.filter((r) => r.id !== id);
     return delay({ deleted: id });
+  },
+
+  // 受眾管理
+  getAudiences: () => delay(audiences.map((a) => ({ ...a }))),
+  previewAudience: (payload: {
+    method: string;
+    text?: string;
+    conditions?: object;
+    segment?: string;
+  }): Promise<AudiencePreview> => {
+    if (payload.segment && SEGMENT_COUNTS[payload.segment] != null) {
+      return delay({
+        estimated_count: SEGMENT_COUNTS[payload.segment],
+        condition_summary: [`預設分群:${payload.segment}`, "本期人數為示範值"],
+      });
+    }
+    return delay({ estimated_count: 2847, condition_summary: [...AUDIENCE_SUMMARY] });
+  },
+  parseAudienceText: (_text: string): Promise<NlParseResult> =>
+    delay({
+      conditions: [
+        { include: true, field: "曾購買產品", operator: "期間內購買", value: "葉黃素 · 過去 30 天" },
+      ],
+      condition_summary: ["訂單行為:過去 30 天內購買「葉黃素」"],
+      estimated_count: 1860,
+    }),
+  createAudience: (payload: {
+    name: string;
+    method: string;
+    text?: string;
+    conditions?: object;
+    segment?: string;
+  }): Promise<Audience> => {
+    const validMethods = ["natural_language", "structured", "smart_segment", "rfm"];
+    const method = (validMethods.includes(payload.method)
+      ? payload.method
+      : "natural_language") as Audience["method"];
+    const a: Audience = {
+      id: `a${String(audienceSeq++).padStart(3, "0")}`,
+      name: payload.name,
+      method,
+      count: payload.segment ? SEGMENT_COUNTS[payload.segment] ?? 2847 : 2847,
+      created_at: nowStr(),
+      frequency: "手動",
+      channels: [],
+    };
+    audiences.push(a);
+    return delay({ ...a });
+  },
+  getAudience: (id: string): Promise<Audience> => {
+    const a = audiences.find((x) => x.id === id) ?? audiences[0];
+    return delay({ ...a });
+  },
+  updateAudienceSettings: (id: string, settings: AudienceSettings): Promise<Audience> => {
+    const a = audiences.find((x) => x.id === id) ?? audiences[0];
+    a.frequency = settings.frequency;
+    a.channels = settings.channels;
+    return delay({ ...a });
+  },
+  deleteAudience: (id: string) => {
+    audiences = audiences.filter((a) => a.id !== id);
+    return delay({ deleted: id });
+  },
+  buildAdAudience: (_id: string, payload: AdBuildRequest): Promise<AdChannelResult> => {
+    const counts: Record<string, number> = { meta: 2410, google: 1980, line: 3120 };
+    return delay({
+      channel: payload.channel,
+      status: "done",
+      count: counts[payload.channel] ?? 1500,
+      message: "建立完成",
+    });
+  },
+  sendPush: (_id: string, _payload: PushPayload): Promise<{ ok: boolean }> =>
+    delay({ ok: true }),
+  getAudienceReport: (_id: string): Promise<AudienceReport> => {
+    const dates = Array.from({ length: 7 }, (_, i) => `2026-06-${String(i + 1).padStart(2, "0")}`);
+    const sentDaily = [1200, 1340, 1180, 1520, 1610, 980, 1450];
+    const daily = dates.map((d, i) => ({
+      date: d,
+      sent: sentDaily[i],
+      open_rate: +(28 + i * 0.6).toFixed(1),
+      click_rate: +(4.2 + i * 0.15).toFixed(1),
+      fail_rate: +(1.8 - i * 0.05).toFixed(1),
+      unsubscribe_rate: +(0.6 - i * 0.02).toFixed(2),
+      bounce_rate: +(1.2 - i * 0.03).toFixed(2),
+      sales: sentDaily[i] * 38,
+    }));
+    return delay({
+      sent: sentDaily.reduce((a, b) => a + b, 0),
+      open_rate: 30.4,
+      click_rate: 4.9,
+      fail_rate: 1.6,
+      unsubscribe_rate: 0.52,
+      bounce_rate: 1.05,
+      sales: daily.reduce((a, b) => a + b.sales, 0),
+      daily,
+    });
   },
 
   listRules: () => delay(rules.map((r) => ({ ...r }))),

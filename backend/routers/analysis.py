@@ -19,16 +19,18 @@ from schemas import (
     AnalysisReport,
     CompareMode,
     DatePreset,
+    Report,
     ReportConfig,
-    SavedReport,
-    SavedReportCreate,
+    ReportCreate,
+    ReportDetail,
+    ReportUpdate,
 )
 
 router = APIRouter(prefix="/analysis", tags=["analysis"])
 
-# 常用報表暫存(記憶體)。Phase 2 改持久化,並由排程每日重跑 schedule_daily=True 的報表。
-_saved: dict[int, SavedReport] = {}
-_id_seq = count(1)
+# 報表清單暫存(記憶體),以 MOCK_REPORTS 為種子。Phase 2 改持久化,並由排程依 frequency 重跑。
+_reports: dict[str, Report] = {r.id: r for r in mock_data.MOCK_REPORTS}
+_id_seq = count(4)  # 種子已用 r001-r003
 
 _PRESET_LABEL: dict[DatePreset, str] = {
     "last_7d": "過去 7 天",
@@ -63,34 +65,67 @@ def _build(config: ReportConfig) -> AnalysisReport:
     )
 
 
-@router.get("", response_model=AnalysisReport)
-def get_analysis() -> AnalysisReport:
-    """以預設設定回傳分析報告(過去 7 天、對比前期)。本期為 mock。"""
+def _sections() -> AnalysisReport:
+    """報表詳情的八區塊內容(本期 mock)。"""
     return _build(ReportConfig())
 
 
-@router.post("/run", response_model=AnalysisReport)
-def run_analysis(config: ReportConfig) -> AnalysisReport:
-    """依控制列設定產生分析報告。本期為 mock,僅反映日期/對比文字。"""
-    return _build(config)
+@router.get("/reports", response_model=list[Report])
+def list_reports() -> list[Report]:
+    """報表清單。"""
+    return list(_reports.values())
 
 
-@router.get("/saved", response_model=list[SavedReport])
-def list_saved() -> list[SavedReport]:
-    return list(_saved.values())
-
-
-@router.post("/saved", response_model=SavedReport)
-def create_saved(payload: SavedReportCreate) -> SavedReport:
-    rid = next(_id_seq)
-    report = SavedReport(id=rid, created_at=datetime.now(), **payload.model_dump())
-    _saved[rid] = report
+@router.post("/reports", response_model=Report)
+def create_report(payload: ReportCreate) -> Report:
+    """新建報表。本期僅存設定,回新報表(id 為 r00X)。"""
+    rid = f"r{next(_id_seq):03d}"
+    report = Report(
+        id=rid,
+        name=payload.name,
+        sources=payload.sources,
+        updated_at=datetime.now().strftime("%Y-%m-%d %H:%M"),
+        frequency=payload.frequency,
+        model=payload.model,
+        prompt=payload.prompt,
+    )
+    _reports[rid] = report
     return report
 
 
-@router.delete("/saved/{report_id}")
-def delete_saved(report_id: int) -> dict:
-    if report_id not in _saved:
-        raise HTTPException(status_code=404, detail="常用報表不存在")
-    del _saved[report_id]
+@router.put("/reports/{report_id}", response_model=Report)
+def update_report(report_id: str, payload: ReportUpdate) -> Report:
+    """更新報表(目前支援編輯 prompt)。"""
+    report = _reports.get(report_id)
+    if report is None:
+        raise HTTPException(status_code=404, detail="報表不存在")
+    report.prompt = payload.prompt
+    _reports[report_id] = report
+    return report
+
+
+@router.get("/reports/{report_id}", response_model=ReportDetail)
+def get_report(report_id: str) -> ReportDetail:
+    """報表詳情:基本資料 + 八區塊。本期八區塊為 mock。"""
+    report = _reports.get(report_id)
+    if report is None:
+        raise HTTPException(status_code=404, detail="報表不存在")
+    return ReportDetail(**report.model_dump(), sections=_sections())
+
+
+@router.post("/reports/{report_id}/run", response_model=Report)
+def run_report(report_id: str) -> Report:
+    """重跑報表(本期僅更新 updated_at)。"""
+    report = _reports.get(report_id)
+    if report is None:
+        raise HTTPException(status_code=404, detail="報表不存在")
+    report.updated_at = datetime.now().strftime("%Y-%m-%d %H:%M")
+    return report
+
+
+@router.delete("/reports/{report_id}")
+def delete_report(report_id: str) -> dict:
+    if report_id not in _reports:
+        raise HTTPException(status_code=404, detail="報表不存在")
+    del _reports[report_id]
     return {"deleted": report_id}

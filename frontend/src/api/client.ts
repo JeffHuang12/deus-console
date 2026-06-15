@@ -4,8 +4,14 @@ import axios from "axios";
 import { message } from "antd";
 import { mockApi } from "./mocks";
 import type {
-  AnalysisReport,
+  AdBuildRequest,
+  AdChannelResult,
+  Audience,
+  AudiencePreview,
+  AudienceReport,
+  AudienceSettings,
   BindingActionResult,
+  PushPayload,
   ChatMessage,
   ChatResponse,
   DataSource,
@@ -13,8 +19,10 @@ import type {
   McpServerCreate,
   MonitorRule,
   MonitorRuleCreate,
-  ReportConfig,
-  SavedReport,
+  NlParseResult,
+  Report,
+  ReportDetail,
+  ReportForm,
 } from "./types";
 
 const http = axios.create({ baseURL: "/api", timeout: 15000 });
@@ -48,18 +56,53 @@ const httpApi = {
       .post<BindingActionResult>(`/bindings/${id}/disconnect`)
       .then((r) => r.data),
 
-  // 頁二 分析中心
-  getAnalysis: () => http.get<AnalysisReport>("/analysis").then((r) => r.data),
-  runAnalysis: (config: ReportConfig) =>
-    http.post<AnalysisReport>("/analysis/run", config).then((r) => r.data),
-  listSavedReports: () =>
-    http.get<SavedReport[]>("/analysis/saved").then((r) => r.data),
-  saveReport: (name: string, config: ReportConfig, schedule_daily: boolean) =>
+  // 頁二 分析中心(報表清單)
+  getReports: () => http.get<Report[]>("/analysis/reports").then((r) => r.data),
+  getReport: (id: string) =>
+    http.get<ReportDetail>(`/analysis/reports/${id}`).then((r) => r.data),
+  createReport: (form: ReportForm) =>
+    http.post<Report>("/analysis/reports", form).then((r) => r.data),
+  updateReport: (id: string, payload: { prompt: string | null }) =>
+    http.put<Report>(`/analysis/reports/${id}`, payload).then((r) => r.data),
+  runReport: (id: string) =>
+    http.post<Report>(`/analysis/reports/${id}/run`).then((r) => r.data),
+  deleteReport: (id: string) =>
+    http.delete(`/analysis/reports/${id}`).then((r) => r.data),
+
+  // 受眾管理
+  getAudiences: () => http.get<Audience[]>("/audience").then((r) => r.data),
+  previewAudience: (payload: {
+    method: string;
+    text?: string;
+    conditions?: object;
+    segment?: string;
+  }) =>
+    http.post<AudiencePreview>("/audience/preview", payload).then((r) => r.data),
+  parseAudienceText: (text: string) =>
     http
-      .post<SavedReport>("/analysis/saved", { name, config, schedule_daily })
+      .post<NlParseResult>("/audience/parse", { method: "natural_language", text })
       .then((r) => r.data),
-  deleteSavedReport: (id: number) =>
-    http.delete(`/analysis/saved/${id}`).then((r) => r.data),
+  createAudience: (payload: {
+    name: string;
+    method: string;
+    text?: string;
+    conditions?: object;
+    segment?: string;
+  }) => http.post<Audience>("/audience", payload).then((r) => r.data),
+  getAudience: (id: string) =>
+    http.get<Audience>(`/audience/${id}`).then((r) => r.data),
+  updateAudienceSettings: (id: string, settings: AudienceSettings) =>
+    http.put<Audience>(`/audience/${id}/settings`, settings).then((r) => r.data),
+  deleteAudience: (id: string) =>
+    http.delete(`/audience/${id}`).then((r) => r.data),
+  buildAdAudience: (id: string, payload: AdBuildRequest) =>
+    http
+      .post<AdChannelResult>(`/audience/${id}/ad-channel`, payload)
+      .then((r) => r.data),
+  sendPush: (id: string, payload: PushPayload) =>
+    http.post<{ ok: boolean }>(`/audience/${id}/push`, payload).then((r) => r.data),
+  getAudienceReport: (id: string) =>
+    http.get<AudienceReport>(`/audience/${id}/report`).then((r) => r.data),
 
   // 頁三 監測中心
   listRules: () => http.get<MonitorRule[]>("/monitoring/rules").then((r) => r.data),
