@@ -315,3 +315,18 @@ class AudienceReport(BaseModel):
     bounce_rate: float  # 退信率
     sales: int  # 銷售額
     daily: list[ReportDailyRow]
+
+
+# --- 留言管理 ---
+class Comment(BaseModel):
+    id: str
+    text: str  # 留言內容
+    post_url: str  # 貼文網址
+    platform: str  # 貼文平台
+    tags: list[str]  # 正面/負面、產品、客服、物流
+    comment_count: int  # 留言數量
+    interaction_count: int  # 互動次數
+
+
+class CommentReplyRequest(BaseModel):
+    ids: list[str]

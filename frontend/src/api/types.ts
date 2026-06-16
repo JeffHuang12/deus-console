@@ -245,3 +245,14 @@ export interface AudienceReport {
   sales: number;
   daily: ReportDailyRow[];
 }
+
+// 留言管理
+export interface Comment {
+  id: string;
+  text: string;
+  post_url: string;
+  platform: string;
+  tags: string[];
+  comment_count: number;
+  interaction_count: number;
+}

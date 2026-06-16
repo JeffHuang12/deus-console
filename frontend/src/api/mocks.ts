@@ -10,6 +10,7 @@ import type {
   AudienceReport,
   AudienceSettings,
   BindingActionResult,
+  Comment,
   PushPayload,
   ChatMessage,
   ChatResponse,
@@ -159,6 +160,23 @@ const SEGMENT_COUNTS: Record<string, number> = {
   rfm_low_wakeup: 76102, rfm_high_value_new: 24965, rfm_low_value_new: 45620,
 };
 
+// 留言管理(對齊後端 mock_data.MOCK_COMMENTS)
+const POST_A = "https://www.facebook.com/vitabox/posts/1001";
+const POST_B = "https://www.instagram.com/p/CB202";
+const POST_C = "https://www.threads.net/@vitabox/post/303";
+const POST_D = "https://line.me/vitabox/404";
+const comments: Comment[] = [
+  { id: "c01", text: "東西超好用,會回購!", post_url: POST_A, platform: "Meta 粉專", tags: ["正面", "產品"], comment_count: 3, interaction_count: 28 },
+  { id: "c02", text: "出貨也太慢了吧,等快兩週", post_url: POST_B, platform: "Instagram", tags: ["負面", "物流"], comment_count: 5, interaction_count: 12 },
+  { id: "c03", text: "請問這款有現貨嗎?", post_url: POST_A, platform: "Meta 粉專", tags: ["客服", "產品"], comment_count: 1, interaction_count: 4 },
+  { id: "c04", text: "客服回覆好快,讚", post_url: POST_C, platform: "Threads", tags: ["正面", "客服"], comment_count: 0, interaction_count: 9 },
+  { id: "c05", text: "包裝破損,裡面壓到了", post_url: POST_B, platform: "Instagram", tags: ["負面", "物流", "客服"], comment_count: 2, interaction_count: 7 },
+  { id: "c06", text: "成分標示可以再清楚一點", post_url: POST_D, platform: "LINE 社群", tags: ["產品"], comment_count: 4, interaction_count: 3 },
+  { id: "c07", text: "已經第三次回購了 推", post_url: POST_A, platform: "Meta 粉專", tags: ["正面", "產品"], comment_count: 1, interaction_count: 33 },
+  { id: "c08", text: "退貨流程好複雜", post_url: POST_C, platform: "Threads", tags: ["負面", "客服"], comment_count: 6, interaction_count: 15 },
+  { id: "c09", text: "什麼時候會補貨?敲碗", post_url: POST_B, platform: "Instagram", tags: ["客服", "產品"], comment_count: 8, interaction_count: 21 },
+];
+
 export const mockApi = {
   listSources: () => delay(sources.map((s) => ({ ...s }))),
   getShoplineStatus: () => delay({ ...shopline }),
@@ -299,6 +317,10 @@ export const mockApi = {
   },
   sendPush: (_id: string, _payload: PushPayload): Promise<{ ok: boolean }> =>
     delay({ ok: true }),
+  getComments: () => delay(comments.map((c) => ({ ...c }))),
+  replyComments: (ids: string[]): Promise<{ replied: number }> =>
+    delay({ replied: ids.length }),
+
   getAudienceReport: (_id: string): Promise<AudienceReport> => {
     const dates = Array.from({ length: 7 }, (_, i) => `2026-06-${String(i + 1).padStart(2, "0")}`);
     const sentDaily = [1200, 1340, 1180, 1520, 1610, 980, 1450];

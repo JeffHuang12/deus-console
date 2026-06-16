@@ -14,6 +14,7 @@ import type {
   PushPayload,
   ChatMessage,
   ChatResponse,
+  Comment,
   DataSource,
   McpServer,
   McpServerCreate,
@@ -103,6 +104,11 @@ const httpApi = {
     http.post<{ ok: boolean }>(`/audience/${id}/push`, payload).then((r) => r.data),
   getAudienceReport: (id: string) =>
     http.get<AudienceReport>(`/audience/${id}/report`).then((r) => r.data),
+
+  // 留言管理
+  getComments: () => http.get<Comment[]>("/comments").then((r) => r.data),
+  replyComments: (ids: string[]) =>
+    http.post<{ replied: number }>("/comments/reply", { ids }).then((r) => r.data),
 
   // 頁三 監測中心
   listRules: () => http.get<MonitorRule[]>("/monitoring/rules").then((r) => r.data),

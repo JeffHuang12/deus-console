@@ -7,6 +7,7 @@ from schemas import (
     AnalysisReport,
     Audience,
     AudiencePreview,
+    Comment,
     DataSource,
     DayHighlight,
     FunnelStage,
@@ -134,6 +135,25 @@ def build_audience_preview(segment: str | None = None) -> AudiencePreview:
 
 # 廣告受眾建立的 mock 人數(依通路)
 AD_CHANNEL_COUNTS: dict[str, int] = {"meta": 2410, "google": 1980, "line": 3120}
+
+
+# 留言管理 mock
+_POST_A = "https://www.facebook.com/vitabox/posts/1001"  # Meta 粉專
+_POST_B = "https://www.instagram.com/p/CB202"  # Instagram
+_POST_C = "https://www.threads.net/@vitabox/post/303"  # Threads
+_POST_D = "https://line.me/vitabox/404"  # LINE 社群
+
+MOCK_COMMENTS: list[Comment] = [
+    Comment(id="c01", text="東西超好用,會回購!", post_url=_POST_A, platform="Meta 粉專", tags=["正面", "產品"], comment_count=3, interaction_count=28),
+    Comment(id="c02", text="出貨也太慢了吧,等快兩週", post_url=_POST_B, platform="Instagram", tags=["負面", "物流"], comment_count=5, interaction_count=12),
+    Comment(id="c03", text="請問這款有現貨嗎?", post_url=_POST_A, platform="Meta 粉專", tags=["客服", "產品"], comment_count=1, interaction_count=4),
+    Comment(id="c04", text="客服回覆好快,讚", post_url=_POST_C, platform="Threads", tags=["正面", "客服"], comment_count=0, interaction_count=9),
+    Comment(id="c05", text="包裝破損,裡面壓到了", post_url=_POST_B, platform="Instagram", tags=["負面", "物流", "客服"], comment_count=2, interaction_count=7),
+    Comment(id="c06", text="成分標示可以再清楚一點", post_url=_POST_D, platform="LINE 社群", tags=["產品"], comment_count=4, interaction_count=3),
+    Comment(id="c07", text="已經第三次回購了 推", post_url=_POST_A, platform="Meta 粉專", tags=["正面", "產品"], comment_count=1, interaction_count=33),
+    Comment(id="c08", text="退貨流程好複雜", post_url=_POST_C, platform="Threads", tags=["負面", "客服"], comment_count=6, interaction_count=15),
+    Comment(id="c09", text="什麼時候會補貨?敲碗", post_url=_POST_B, platform="Instagram", tags=["客服", "產品"], comment_count=8, interaction_count=21),
+]
 
 
 def build_audience_report() -> "AudienceReport":

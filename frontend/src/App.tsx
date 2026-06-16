@@ -3,6 +3,7 @@ import {
   ApiOutlined,
   BarChartOutlined,
   TeamOutlined,
+  CommentOutlined,
   AlertOutlined,
   SettingOutlined,
   MessageOutlined,
@@ -17,6 +18,7 @@ import AudienceNewPage from "./pages/AudienceNewPage";
 import AudienceAdBuildPage from "./pages/AudienceAdBuildPage";
 import AudiencePushPage from "./pages/AudiencePushPage";
 import AudienceReportPage from "./pages/AudienceReportPage";
+import CommentsPage from "./pages/CommentsPage";
 import MonitoringPage from "./pages/MonitoringPage";
 import McpPage from "./pages/McpPage";
 import PromptPage from "./pages/PromptPage";
@@ -27,6 +29,7 @@ const MENU = [
   { key: "/binding", icon: <ApiOutlined />, label: "數據綁定" },
   { key: "/analysis", icon: <BarChartOutlined />, label: "分析中心" },
   { key: "/audience", icon: <TeamOutlined />, label: "受眾管理" },
+  { key: "/comments", icon: <CommentOutlined />, label: "留言管理" },
   { key: "/monitoring", icon: <AlertOutlined />, label: "監測中心" },
   { key: "/mcp", icon: <SettingOutlined />, label: "MCP 設定" },
   { key: "/prompt", icon: <MessageOutlined />, label: "Prompt 互動" },
@@ -76,6 +79,7 @@ export default function App() {
             <Route path="/audience/:id/ad-build" element={<AudienceAdBuildPage />} />
             <Route path="/audience/:id/push" element={<AudiencePushPage />} />
             <Route path="/audience/:id/report" element={<AudienceReportPage />} />
+            <Route path="/comments" element={<CommentsPage />} />
             <Route path="/monitoring" element={<MonitoringPage />} />
             <Route path="/mcp" element={<McpPage />} />
             <Route path="/prompt" element={<PromptPage />} />
