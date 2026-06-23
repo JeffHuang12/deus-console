@@ -49,12 +49,12 @@ const delay = <T>(data: T): Promise<T> =>
 
 // 通知中心：AI 每日自動產出的洞察（記憶體暫存，重整即還原）
 let notifications: Notification[] = [
-  { id: "n1", date: "2026-06-23", time: "09:00", category: "庫存預警", title: "益生菌即將缺貨，建議暫停廣告", content: "益生菌（VB-PRO）目前庫存 8、預估可售約 1 天,低於安全庫存 30。已在投放的 Google DPA 仍在消耗預算,建議暫停或補貨,避免廣告把流量帶到無法出貨的商品。", source: "商品與庫存中心", feedback: null },
-  { id: "n2", date: "2026-06-23", time: "09:00", category: "素材疲勞", title: "Meta「情境影片 A」CTR 衰退 34%", content: "過去 30 天 Meta 轉換活動的「情境影片 A」CTR 從 2.4% 降到 1.6%,衰退逾 25% 進入疲勞區。建議優先汰換,並把預算移往仍健康的成分教育素材。", source: "素材疲勞偵測", feedback: null },
-  { id: "n3", date: "2026-06-23", time: "09:00", category: "受眾建議", title: "高 LTV 客戶可擴展類似受眾", content: "年消費前 20% 客戶名單已更新。以此為種子在 Meta 建立 1% 類似受眾,預估可觸及約 24 萬人,通常 CAC 比廣投低 30-50%,建議測試。", source: "受眾管理", feedback: null },
-  { id: "n4", date: "2026-06-23", time: "09:00", category: "廣告成效", title: "跨平台真實 ROAS：Google 品牌字最高", content: "本週各渠道真實 ROAS（合併訂單金額計算）:Google 品牌字 6.8、Google 再行銷 5.4、LINE 2.7、Meta 新客 1.9。Meta 新客成本偏高,建議調整出價或受眾。", source: "AI 資料查詢（跨平台）", feedback: null },
-  { id: "n5", date: "2026-06-22", time: "09:00", category: "趨勢洞察", title: "週末工作階段走高，建議加碼投放", content: "GA4 過去 7 天工作階段呈週末走高,06-16 為高點。建議把預算往週末傾斜,並確認熱銷品庫存充足。", source: "AI 資料查詢（GA4）", feedback: "like" },
-  { id: "n6", date: "2026-06-22", time: "09:00", category: "客服洞察", title: "物流類客訴上升，建議優先處理", content: "昨日 LINE 對話中物流類負面情緒對話增加,已自動標記並派工物流客服組。建議主管關注是否有出貨延遲。", source: "客服對話中心", feedback: null },
+  { id: "n1", date: "2026-06-23", time: "09:00", category: "庫存預警", title: "益生菌即將缺貨，建議暫停廣告", content: "益生菌（VB-PRO）目前庫存 8、預估可售約 1 天,低於安全庫存 30。已在投放的 Google DPA 仍在消耗預算,建議暫停或補貨,避免廣告把流量帶到無法出貨的商品。", source: "商品與庫存中心", severity: "high", read: false, action_label: "前往商品與庫存中心", action_route: "/merchandising", feedback: null },
+  { id: "n2", date: "2026-06-23", time: "09:00", category: "素材疲勞", title: "Meta「情境影片 A」CTR 衰退 34%", content: "過去 30 天 Meta 轉換活動的「情境影片 A」CTR 從 2.4% 降到 1.6%,衰退逾 25% 進入疲勞區。建議優先汰換,並把預算移往仍健康的成分教育素材。", source: "素材疲勞偵測", severity: "mid", read: false, action_label: "前往素材疲勞偵測", action_route: "/creative-fatigue", feedback: null },
+  { id: "n3", date: "2026-06-23", time: "09:00", category: "受眾建議", title: "高 LTV 客戶可擴展類似受眾", content: "年消費前 20% 客戶名單已更新。以此為種子在 Meta 建立 1% 類似受眾,預估可觸及約 24 萬人,通常 CAC 比廣投低 30-50%,建議測試。", source: "受眾管理", severity: "mid", read: false, action_label: "前往受眾建立", action_route: "/audience/new", feedback: null },
+  { id: "n4", date: "2026-06-23", time: "09:00", category: "廣告成效", title: "跨平台真實 ROAS：Google 品牌字最高", content: "本週各渠道真實 ROAS（合併訂單金額計算）:Google 品牌字 6.8、Google 再行銷 5.4、LINE 2.7、Meta 新客 1.9。Meta 新客成本偏高,建議調整出價或受眾。", source: "AI 資料查詢（跨平台）", severity: "low", read: false, action_label: "前往 AI 資料查詢", action_route: "/ai-query", feedback: null },
+  { id: "n5", date: "2026-06-22", time: "09:00", category: "趨勢洞察", title: "週末工作階段走高，建議加碼投放", content: "GA4 過去 7 天工作階段呈週末走高,06-16 為高點。建議把預算往週末傾斜,並確認熱銷品庫存充足。", source: "AI 資料查詢（GA4）", severity: "low", read: true, action_label: "前往 AI 資料查詢", action_route: "/ai-query", feedback: "like" },
+  { id: "n6", date: "2026-06-22", time: "09:00", category: "客服洞察", title: "物流類客訴上升，建議優先處理", content: "昨日 LINE 對話中物流類負面情緒對話增加,已自動標記並派工物流客服組。建議主管關注是否有出貨延遲。", source: "客服對話中心", severity: "high", read: false, action_label: "前往客服對話中心", action_route: "/conversations", feedback: null },
 ];
 
 // --- 頁一:資料源(含 Boxful) ---
@@ -644,6 +644,13 @@ export const mockApi = {
       n.id === id ? { ...n, feedback } : n
     );
     return delay({ ...(notifications.find((n) => n.id === id) as Notification) });
+  },
+  markNotificationsRead: (ids: string[]): Promise<{ updated: number }> => {
+    const set = new Set(ids);
+    notifications = notifications.map((n) =>
+      set.has(n.id) ? { ...n, read: true } : n
+    );
+    return delay({ updated: ids.length });
   },
 
   // 素材疲勞偵測（示範）：依時間範圍與比較基準回趨勢、素材表現與 AI 統整

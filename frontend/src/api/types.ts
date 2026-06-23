@@ -429,6 +429,7 @@ export type AiQuerySource = "ga4" | "google_ads" | "meta_ads" | "search_console"
 
 // --- 通知中心（AI 每日自動產出的洞察）---
 export type NotificationFeedback = "like" | "dislike";
+export type NotificationSeverity = "high" | "mid" | "low";
 
 export interface Notification {
   id: string;
@@ -438,6 +439,10 @@ export interface Notification {
   title: string;
   content: string; // AI 產出的內容
   source: string; // 對應的查詢/頁面
+  severity: NotificationSeverity; // 急迫度（排序與置頂用）
+  read: boolean; // 已讀/未讀
+  action_label: string; // 主要行動按鈕文字（洞察→行動）
+  action_route: string; // 行動按鈕導向的路由
   feedback: NotificationFeedback | null;
 }
 

@@ -220,6 +220,10 @@ const httpApi = {
     http
       .post<Notification>(`/notifications/${id}/feedback`, { feedback })
       .then((r) => r.data),
+  markNotificationsRead: (ids: string[]) =>
+    http
+      .post<{ updated: number }>("/notifications/read", { ids })
+      .then((r) => r.data),
 };
 
 const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === "true";
