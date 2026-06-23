@@ -9,7 +9,7 @@ from __future__ import annotations
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from routers import analysis, audience, bindings, chat, comments, mcp, monitoring
+from routers import analysis, audience, bindings, chat, comments, ga4, mcp, monitoring
 
 app = FastAPI(title="DEUS Console API", version="0.1.0")
 
@@ -29,6 +29,7 @@ app.include_router(comments.router, prefix=API_PREFIX)
 app.include_router(monitoring.router, prefix=API_PREFIX)
 app.include_router(mcp.router, prefix=API_PREFIX)
 app.include_router(chat.router, prefix=API_PREFIX)
+app.include_router(ga4.router, prefix=API_PREFIX)
 
 
 @app.get("/api/health")

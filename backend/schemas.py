@@ -330,3 +330,51 @@ class Comment(BaseModel):
 
 class CommentReplyRequest(BaseModel):
     ids: list[str]
+
+
+# --- GA4 自然語言查詢 ---
+
+
+class Ga4Table(BaseModel):
+    """攤平後的查詢結果表格(欄位 + 列 + 指標型別)。"""
+
+    columns: list[str]
+    rows: list[dict]
+    metric_types: dict = Field(default_factory=dict)
+
+
+class Ga4Chart(BaseModel):
+    """圖表規格:由系統依查詢結果與模型建議產生。"""
+
+    type: Literal["line", "bar"]
+    x: str  # 當水平軸的維度名稱
+    series: list[str]  # 要畫的指標名稱
+
+
+class Ga4QueryRequest(BaseModel):
+    text: str = Field(..., min_length=1, description="自然語言查詢")
+    # 要用的 AI 模型(claude-* 或 gemini-*);預設 Haiku 以省 token
+    model: str = "claude-haiku-4-5-20251001"
+
+
+class Ga4QueryResponse(BaseModel):
+    narrative: str  # 文字說明
+    table: Optional[Ga4Table] = None
+    chart: Optional[Ga4Chart] = None
+    error: Optional[str] = None  # 有值時前端以提示呈現
+
+
+class Ga4HistorySaveRequest(Ga4QueryResponse):
+    """前端送來要存的一筆查詢:結果欄位 + 當時的問題與模型。"""
+
+    text: str  # 使用者當時輸入的問題
+    model: Optional[str] = None  # 當時用的模型
+
+
+class Ga4HistoryEntry(Ga4QueryResponse):
+    """已儲存的查詢(可在同頁回看)。後端負責配 id 與時間。"""
+
+    id: str
+    text: str
+    model: Optional[str] = None
+    created_at: str  # ISO 時間
