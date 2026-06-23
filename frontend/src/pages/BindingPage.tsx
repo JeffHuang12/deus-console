@@ -8,12 +8,14 @@ import {
   Row,
   Space,
   Tag,
+  Tooltip,
   Typography,
   message,
 } from "antd";
 import PageHeader from "../components/PageHeader";
 import StatusTag from "../components/StatusTag";
 import { api } from "../api/client";
+import { OFFICIAL_MCP } from "../api/audienceMeta";
 import type { BindingActionResult, DataSource } from "../api/types";
 
 const { Text } = Typography;
@@ -128,6 +130,11 @@ export default function BindingPage() {
                 <Tag color={s.auth_kind === "api_key" ? "gold" : "blue"}>
                   {s.auth_kind === "api_key" ? "API Key" : "OAuth"}
                 </Tag>
+                {OFFICIAL_MCP.has(s.id) && (
+                  <Tooltip title="此資料源有官方 MCP，可在「AI 資料查詢」用自然語言查詢">
+                    <Tag color="purple">支援 AI 查詢</Tag>
+                  </Tooltip>
+                )}
                 <Text type="secondary">
                   {s.status === "connected"
                     ? `帳號:${s.account ?? "-"}`
