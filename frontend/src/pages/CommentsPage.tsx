@@ -43,6 +43,27 @@ function draftReply(c: Comment): string {
   return "感謝您的留言,我們已收到您的意見並會持續優化。";
 }
 
+// 由既有標籤推導情緒/嚴重度/派工對象(本期規則式,Phase 2 由 LLM 語意判斷)
+function sentimentOf(c: Comment): { label: string; color: string } {
+  if (c.tags.includes("負面")) return { label: "負面", color: "red" };
+  if (c.tags.includes("正面")) return { label: "正面", color: "green" };
+  return { label: "中性", color: "default" };
+}
+
+function severityOf(c: Comment): { label: string; color: string } {
+  if (c.tags.includes("負面") && (c.tags.includes("客服") || c.tags.includes("物流")))
+    return { label: "高", color: "red" };
+  if (c.tags.includes("負面")) return { label: "中", color: "orange" };
+  return { label: "低", color: "default" };
+}
+
+function routeOf(c: Comment): string {
+  if (c.tags.includes("物流")) return "物流客服組";
+  if (c.tags.includes("負面")) return "客訴升級組";
+  if (c.tags.includes("客服")) return "一般客服組";
+  return "社群小編";
+}
+
 export default function CommentsPage() {
   const [comments, setComments] = useState<Comment[]>([]);
   const [platform, setPlatform] = useState<string>();
@@ -124,6 +145,27 @@ export default function CommentsPage() {
       render: (ts: string[]) => ts.map((t) => <Tag key={t} color={TAG_COLOR[t]}>{t}</Tag>),
     },
     {
+      title: "情緒",
+      key: "sentiment",
+      render: (_: unknown, c: Comment) => {
+        const s = sentimentOf(c);
+        return <Tag color={s.color}>{s.label}</Tag>;
+      },
+    },
+    {
+      title: "嚴重度",
+      key: "severity",
+      render: (_: unknown, c: Comment) => {
+        const s = severityOf(c);
+        return <Tag color={s.color}>{s.label}</Tag>;
+      },
+    },
+    {
+      title: "派工對象",
+      key: "route",
+      render: (_: unknown, c: Comment) => <Text type="secondary">{routeOf(c)}</Text>,
+    },
+    {
       title: "留言數量",
       dataIndex: "comment_count",
       sorter: (a: Comment, b: Comment) => a.comment_count - b.comment_count,
@@ -132,6 +174,19 @@ export default function CommentsPage() {
       title: "互動次數",
       dataIndex: "interaction_count",
       sorter: (a: Comment, b: Comment) => a.interaction_count - b.interaction_count,
+    },
+    {
+      title: "操作",
+      key: "action",
+      render: (_: unknown, c: Comment) => (
+        <Button
+          size="small"
+          danger={severityOf(c).label === "高"}
+          onClick={() => message.success(`已升級給 ${routeOf(c)}`)}
+        >
+          升級
+        </Button>
+      ),
     },
   ];
 
