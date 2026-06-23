@@ -15,7 +15,25 @@ import type {
   ChatMessage,
   ChatResponse,
   Comment,
+  PredictionModel,
+  PredictionResult,
+  Conversation,
+  ConversationDetail,
+  AttributionData,
+  InventoryProduct,
+  MerchantFeed,
+  ProductAssociation,
+  AssocWindow,
+  AiQuerySource,
+  LookalikePayload,
+  LookalikeResult,
+  CreativeFatigueData,
+  FatigueFilters,
+  Notification,
+  NotificationFeedback,
   DataSource,
+  Ga4HistoryEntry,
+  Ga4QueryResponse,
   McpServer,
   McpServerCreate,
   MonitorRule,
@@ -132,6 +150,75 @@ const httpApi = {
   chat: (msg: string, history: ChatMessage[]) =>
     http
       .post<ChatResponse>("/chat", { message: msg, history })
+      .then((r) => r.data),
+
+  // GA4 自然語言查詢(agent + MCP,回應較慢,單獨拉長 timeout)
+  queryGa4: (text: string, model: string) =>
+    http
+      .post<Ga4QueryResponse>("/ga4/query", { text, model }, { timeout: 120000 })
+      .then((r) => r.data),
+
+  // GA4 查詢歷史(後端檔案持久化)
+  getGa4History: () =>
+    http.get<Ga4HistoryEntry[]>("/ga4/history").then((r) => r.data),
+  saveGa4History: (text: string, res: Ga4QueryResponse, model: string) =>
+    http
+      .post<Ga4HistoryEntry>("/ga4/history", { text, model, ...res })
+      .then((r) => r.data),
+  deleteGa4History: (id: string) =>
+    http.delete(`/ga4/history/${id}`).then((r) => r.data),
+  clearGa4History: () => http.delete("/ga4/history").then((r) => r.data),
+
+  // 預測模型中心
+  getPredictionModels: () =>
+    http.get<PredictionModel[]>("/predictions/models").then((r) => r.data),
+  getPredictionResult: (id: string) =>
+    http.get<PredictionResult>(`/predictions/models/${id}/result`).then((r) => r.data),
+
+  // 客服對話中心
+  getConversations: () =>
+    http.get<Conversation[]>("/conversations").then((r) => r.data),
+  getConversation: (id: string) =>
+    http.get<ConversationDetail>(`/conversations/${id}`).then((r) => r.data),
+
+  // 商品與庫存中心
+  getInventory: () =>
+    http.get<InventoryProduct[]>("/merchandising/inventory").then((r) => r.data),
+  getMerchantFeed: (sku: string) =>
+    http.get<MerchantFeed>(`/merchandising/feed/${sku}`).then((r) => r.data),
+
+  // 商品關聯分析
+  getProductAssociations: (window: AssocWindow) =>
+    http
+      .get<ProductAssociation[]>("/associations", { params: { window } })
+      .then((r) => r.data),
+
+  // 歸因分析
+  getAttribution: () =>
+    http.get<AttributionData>("/attribution").then((r) => r.data),
+
+  // AI 資料查詢（單一頁＋來源切換）
+  queryMcp: (source: AiQuerySource, text: string, model: string) =>
+    http
+      .post<Ga4QueryResponse>("/ai-query", { source, text, model }, { timeout: 120000 })
+      .then((r) => r.data),
+
+  // Lookalike：建立類似受眾
+  buildLookalike: (payload: LookalikePayload) =>
+    http.post<LookalikeResult>("/audience/lookalike", payload).then((r) => r.data),
+
+  // 素材疲勞偵測
+  getCreativeFatigue: (filters: FatigueFilters) =>
+    http
+      .get<CreativeFatigueData>("/creative-fatigue", { params: filters })
+      .then((r) => r.data),
+
+  // 通知中心
+  getNotifications: () =>
+    http.get<Notification[]>("/notifications").then((r) => r.data),
+  reactNotification: (id: string, feedback: NotificationFeedback | null) =>
+    http
+      .post<Notification>(`/notifications/${id}/feedback`, { feedback })
       .then((r) => r.data),
 };
 
