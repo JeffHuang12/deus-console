@@ -1,60 +1,45 @@
-"""頁四:MCP 設定 — MCP server 清單 CRUD。
+"""MCP 設定 — MCP server 清單 CRUD。
 
-本期用記憶體暫存。Phase 2 寫入設定檔(如 .claude/settings.json 或專屬設定),並可實際探測連線狀態。
+Phase 2 可實際探測連線狀態並寫入 .claude/settings.json。
 """
 
 from __future__ import annotations
 
-from itertools import count
+from fastapi import APIRouter
 
-from fastapi import APIRouter, HTTPException
-
+from db import db
+from exceptions import not_found
 from schemas import McpServer, McpServerCreate
 
 router = APIRouter(prefix="/mcp", tags=["mcp"])
 
-_servers: dict[int, McpServer] = {}
-_id_seq = count(1)
 
-
-def _seed() -> None:
-    for name, command in [
-        ("filesystem", "npx -y @modelcontextprotocol/server-filesystem"),
-        ("firecrawl", "npx -y firecrawl-mcp"),
-    ]:
-        sid = next(_id_seq)
-        _servers[sid] = McpServer(id=sid, name=name, command=command, enabled=True, status="offline")
-
-
-_seed()
+def _row_to_server(row: dict) -> McpServer:
+    row["enabled"] = bool(row["enabled"])
+    return McpServer(**row)
 
 
 @router.get("/servers", response_model=list[McpServer])
 def list_servers() -> list[McpServer]:
-    return list(_servers.values())
+    return [_row_to_server(r) for r in db.list_servers()]
 
 
 @router.post("/servers", response_model=McpServer)
 def create_server(payload: McpServerCreate) -> McpServer:
-    sid = next(_id_seq)
-    server = McpServer(id=sid, status="offline", **payload.model_dump())
-    _servers[sid] = server
-    return server
+    row = db.create_server(payload.model_dump())
+    return _row_to_server(row)
 
 
 @router.put("/servers/{server_id}", response_model=McpServer)
 def update_server(server_id: int, payload: McpServerCreate) -> McpServer:
-    if server_id not in _servers:
-        raise HTTPException(status_code=404, detail="MCP server 不存在")
-    existing = _servers[server_id]
-    updated = McpServer(id=server_id, status=existing.status, **payload.model_dump())
-    _servers[server_id] = updated
-    return updated
+    row = db.update_server(server_id, payload.model_dump())
+    if row is None:
+        not_found("MCP server")
+    return _row_to_server(row)
 
 
 @router.delete("/servers/{server_id}")
 def delete_server(server_id: int) -> dict:
-    if server_id not in _servers:
-        raise HTTPException(status_code=404, detail="MCP server 不存在")
-    del _servers[server_id]
+    if not db.delete_server(server_id):
+        not_found("MCP server")
     return {"deleted": server_id}

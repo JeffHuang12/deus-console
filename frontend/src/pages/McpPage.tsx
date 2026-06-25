@@ -12,7 +12,7 @@ import {
 } from "antd";
 import PageHeader from "../components/PageHeader";
 import { api } from "../api/client";
-import type { McpServer } from "../api/types";
+import type { McpServer, McpServerCreate } from "../api/types";
 
 export default function McpPage() {
   const [servers, setServers] = useState<McpServer[]>([]);
@@ -24,7 +24,7 @@ export default function McpPage() {
     reload();
   }, []);
 
-  const onCreate = async (values: any) => {
+  const onCreate = async (values: Omit<McpServerCreate, "enabled">) => {
     await api.createServer({ enabled: true, ...values });
     message.success("已新增 MCP server");
     form.resetFields();

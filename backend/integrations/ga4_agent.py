@@ -47,8 +47,8 @@ GOOGLE_PROJECT_ID = os.environ.get(
 )
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 
-# 預設模型:Haiku(降 token 成本)。前端可切 Claude 各型號或 Gemini。
-DEFAULT_MODEL = "claude-haiku-4-5-20251001"
+# 預設模型:Haiku(降 token 成本)。前端可切 Claude 各型號或 Gemini。可用 LLM_DEFAULT_MODEL 覆寫。
+DEFAULT_MODEL = os.environ.get("LLM_DEFAULT_MODEL", "claude-haiku-4-5-20251001")
 
 # analytics-mcp console script 與後端 venv 同目錄,用絕對路徑避免 PATH 依賴。
 _MCP_COMMAND = str(Path(sys.executable).parent / "analytics-mcp")

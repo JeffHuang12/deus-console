@@ -14,7 +14,7 @@ import {
 } from "antd";
 import PageHeader from "../components/PageHeader";
 import { api } from "../api/client";
-import type { Comparator, MonitorRule, NotifyChannel } from "../api/types";
+import type { Comparator, MonitorRule, MonitorRuleCreate, NotifyChannel } from "../api/types";
 
 const METRICS = [
   { value: "roas", label: "ROAS" },
@@ -61,7 +61,7 @@ export default function MonitoringPage() {
     reload();
   }, []);
 
-  const onCreate = async (values: any) => {
+  const onCreate = async (values: Omit<MonitorRuleCreate, "enabled">) => {
     await api.createRule({ enabled: true, ...values });
     message.success("已新增監測規則");
     form.resetFields();

@@ -3,8 +3,7 @@
 混合策略:
   - 規則計算區塊(KPI、漏斗、波動、趨勢、優異/異常日期)→ 本期由 mock_data 提供,
     Phase 2 改由 integrations/bigquery_client.query() 取數後在此計算。
-  - LLM 潤飾區塊(執行摘要、優化建議、總結)→ Phase 2 交給 integrations/llm.refine_insight(),
-    使用 config.model 與 config.prompt。
+  - LLM 潤飾區塊(執行摘要、優化建議、總結)→ integrations/llm.refine_insight()。
 """
 
 from __future__ import annotations
@@ -12,9 +11,11 @@ from __future__ import annotations
 from datetime import datetime
 from itertools import count
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 
 import mock_data
+from db import db
+from exceptions import not_found
 from schemas import (
     AnalysisReport,
     CompareMode,
@@ -28,9 +29,19 @@ from schemas import (
 
 router = APIRouter(prefix="/analysis", tags=["analysis"])
 
-# 報表清單暫存(記憶體),以 MOCK_REPORTS 為種子。Phase 2 改持久化,並由排程依 frequency 重跑。
-_reports: dict[str, Report] = {r.id: r for r in mock_data.MOCK_REPORTS}
-_id_seq = count(4)  # 種子已用 r001-r003
+# 種子報表：首次啟動時若 DB 無任何報表，寫入 mock 種子。
+_seeded = False
+
+
+def _ensure_seed() -> None:
+    global _seeded
+    if _seeded:
+        return
+    _seeded = True
+    if not db.list_reports():
+        for r in mock_data.MOCK_REPORTS:
+            db.save_report(r.model_dump())
+
 
 _PRESET_LABEL: dict[DatePreset, str] = {
     "last_7d": "過去 7 天",
@@ -56,9 +67,9 @@ def _range_label(config: ReportConfig) -> str:
 def _build(config: ReportConfig) -> AnalysisReport:
     # TODO Phase 2:
     #   computed = bigquery_client.query(...) 依 config 的日期/資料源取數並做規則計算
-    #   report.executive_summary = llm.refine_insight("executive_summary", computed, model=config.model, prompt=config.prompt)
-    #   report.recommendations = llm.refine_insight("recommendations", computed, ...)
-    #   report.conclusion = llm.refine_insight("conclusion", computed, ...)
+    #   report.executive_summary = llm.refine_insight("executive_summary", computed, model=config.model)
+    #   report.recommendations = llm.refine_insight("recommendations", computed, model=config.model)
+    #   report.conclusion = llm.refine_insight("conclusion", computed, model=config.model)
     return mock_data.build_analysis_report(
         range_label=_range_label(config),
         compare_label=_COMPARE_LABEL.get(config.compare_mode, "對比前期"),
@@ -66,20 +77,23 @@ def _build(config: ReportConfig) -> AnalysisReport:
 
 
 def _sections() -> AnalysisReport:
-    """報表詳情的八區塊內容(本期 mock)。"""
     return _build(ReportConfig())
 
 
 @router.get("/reports", response_model=list[Report])
 def list_reports() -> list[Report]:
-    """報表清單。"""
-    return list(_reports.values())
+    _ensure_seed()
+    return [Report(**r) for r in db.list_reports()]
 
 
 @router.post("/reports", response_model=Report)
 def create_report(payload: ReportCreate) -> Report:
-    """新建報表。本期僅存設定,回新報表(id 為 r00X)。"""
-    rid = f"r{next(_id_seq):03d}"
+    _ensure_seed()
+    existing_ids = {r["id"] for r in db.list_reports()}
+    n = 4
+    while f"r{n:03d}" in existing_ids:
+        n += 1
+    rid = f"r{n:03d}"
     report = Report(
         id=rid,
         name=payload.name,
@@ -89,43 +103,40 @@ def create_report(payload: ReportCreate) -> Report:
         model=payload.model,
         prompt=payload.prompt,
     )
-    _reports[rid] = report
+    db.save_report(report.model_dump())
     return report
 
 
 @router.put("/reports/{report_id}", response_model=Report)
 def update_report(report_id: str, payload: ReportUpdate) -> Report:
-    """更新報表(目前支援編輯 prompt)。"""
-    report = _reports.get(report_id)
-    if report is None:
-        raise HTTPException(status_code=404, detail="報表不存在")
-    report.prompt = payload.prompt
-    _reports[report_id] = report
-    return report
+    row = db.get_report(report_id)
+    if row is None:
+        not_found("報表")
+    row["prompt"] = payload.prompt
+    db.save_report(row)
+    return Report(**row)
 
 
 @router.get("/reports/{report_id}", response_model=ReportDetail)
 def get_report(report_id: str) -> ReportDetail:
-    """報表詳情:基本資料 + 八區塊。本期八區塊為 mock。"""
-    report = _reports.get(report_id)
-    if report is None:
-        raise HTTPException(status_code=404, detail="報表不存在")
-    return ReportDetail(**report.model_dump(), sections=_sections())
+    row = db.get_report(report_id)
+    if row is None:
+        not_found("報表")
+    return ReportDetail(**row, sections=_sections())
 
 
 @router.post("/reports/{report_id}/run", response_model=Report)
 def run_report(report_id: str) -> Report:
-    """重跑報表(本期僅更新 updated_at)。"""
-    report = _reports.get(report_id)
-    if report is None:
-        raise HTTPException(status_code=404, detail="報表不存在")
-    report.updated_at = datetime.now().strftime("%Y-%m-%d %H:%M")
-    return report
+    row = db.get_report(report_id)
+    if row is None:
+        not_found("報表")
+    row["updated_at"] = datetime.now().strftime("%Y-%m-%d %H:%M")
+    db.save_report(row)
+    return Report(**row)
 
 
 @router.delete("/reports/{report_id}")
 def delete_report(report_id: str) -> dict:
-    if report_id not in _reports:
-        raise HTTPException(status_code=404, detail="報表不存在")
-    del _reports[report_id]
+    if not db.delete_report(report_id):
+        not_found("報表")
     return {"deleted": report_id}
