@@ -54,22 +54,27 @@ def _make_options(system_prompt: str, model: str) -> ClaudeAgentOptions:
     )
 
 
+async def _run_conversation(
+    messages: list[UserMessage | AssistantMessage],
+    system_prompt: str,
+    model: str,
+) -> str:
+    """核心 async 對話迴圈，收集所有 ResultMessage TextBlock 並回傳。"""
+    result_text = ""
+    async for event in query(messages=messages, options=_make_options(system_prompt, model)):
+        if isinstance(event, ResultMessage):
+            for block in event.content:
+                if isinstance(block, TextBlock):
+                    result_text += block.text
+    return result_text.strip()
+
+
 def _run_query(prompt: str, system_prompt: str, model: str) -> str:
-    """同步包裝 async query()。"""
-
-    async def _inner() -> str:
-        messages: list[UserMessage | AssistantMessage] = [
-            UserMessage(content=[TextBlock(type="text", text=prompt)])
-        ]
-        result_text = ""
-        async for event in query(messages=messages, options=_make_options(system_prompt, model)):
-            if isinstance(event, ResultMessage):
-                for block in event.content:
-                    if isinstance(block, TextBlock):
-                        result_text += block.text
-        return result_text.strip()
-
-    return asyncio.run(_inner())
+    """單輪查詢的同步包裝。"""
+    messages: list[UserMessage | AssistantMessage] = [
+        UserMessage(content=[TextBlock(type="text", text=prompt)])
+    ]
+    return asyncio.run(_run_conversation(messages, system_prompt, model))
 
 
 def refine_insight(section: str, computed: dict, model: str = DEFAULT_MODEL) -> str:
@@ -96,30 +101,17 @@ def chat(message: str, history: list[dict], model: str = DEFAULT_MODEL) -> str:
 
     history: [{"role": "user"|"assistant", "content": str}, ...]
     """
-
-    async def _inner() -> str:
-        messages: list[UserMessage | AssistantMessage] = []
-        for turn in history:
-            role = turn.get("role", "user")
-            content = turn.get("content", "")
-            if role == "user":
-                messages.append(UserMessage(content=[TextBlock(type="text", text=content)]))
-            else:
-                messages.append(AssistantMessage(content=[TextBlock(type="text", text=content)]))
-        messages.append(UserMessage(content=[TextBlock(type="text", text=message)]))
-
-        result_text = ""
-        async for event in query(
-            messages=messages,
-            options=_make_options(_CHAT_SYSTEM, model),
-        ):
-            if isinstance(event, ResultMessage):
-                for block in event.content:
-                    if isinstance(block, TextBlock):
-                        result_text += block.text
-        return result_text.strip()
+    messages: list[UserMessage | AssistantMessage] = []
+    for turn in history:
+        role = turn.get("role", "user")
+        content = turn.get("content", "")
+        if role == "user":
+            messages.append(UserMessage(content=[TextBlock(type="text", text=content)]))
+        else:
+            messages.append(AssistantMessage(content=[TextBlock(type="text", text=content)]))
+    messages.append(UserMessage(content=[TextBlock(type="text", text=message)]))
 
     try:
-        return asyncio.run(_inner())
+        return asyncio.run(_run_conversation(messages, _CHAT_SYSTEM, model))
     except Exception as exc:  # noqa: BLE001
         return f"（Claude 回覆暫時無法取得：{exc}）"

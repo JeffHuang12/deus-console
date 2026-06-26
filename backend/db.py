@@ -72,6 +72,15 @@ def _init_schema(conn: sqlite3.Connection) -> None:
     conn.commit()
 
 
+def _deserialize_row(row: sqlite3.Row, *json_fields: str) -> dict:
+    """將 sqlite3.Row 轉為 dict，並把指定欄位從 JSON 字串反序列化。"""
+    d = dict(row)
+    for field in json_fields:
+        if field in d:
+            d[field] = json.loads(d[field])
+    return d
+
+
 class _DB:
     def __init__(self) -> None:
         self._conn = _connect()
@@ -116,9 +125,7 @@ class _DB:
         return cur.rowcount > 0
 
     def _report_row(self, row: sqlite3.Row) -> dict:
-        d = dict(row)
-        d["sources"] = json.loads(d["sources"])
-        return d
+        return _deserialize_row(row, "sources")
 
     # ── Audiences ─────────────────────────────────────────────────────────────
 
@@ -153,9 +160,7 @@ class _DB:
         return cur.rowcount > 0
 
     def _audience_row(self, row: sqlite3.Row) -> dict:
-        d = dict(row)
-        d["channels"] = json.loads(d["channels"])
-        return d
+        return _deserialize_row(row, "channels")
 
     # ── Monitor Rules ─────────────────────────────────────────────────────────
 
@@ -240,14 +245,14 @@ class _DB:
 
     def seed_defaults(self) -> None:
         """首次啟動時寫入預設種子資料（已有資料則跳過）。"""
-        if not self.list_servers():
+        if not self._exec("SELECT 1 FROM mcp_servers LIMIT 1").fetchone():
             for name, command in [
                 ("filesystem", "npx -y @modelcontextprotocol/server-filesystem"),
                 ("firecrawl", "npx -y firecrawl-mcp"),
             ]:
                 self.create_server({"name": name, "command": command, "enabled": True})
 
-        if not self.list_rules():
+        if not self._exec("SELECT 1 FROM monitor_rules LIMIT 1").fetchone():
             self.create_rule({
                 "metric": "roas",
                 "comparator": "lt",

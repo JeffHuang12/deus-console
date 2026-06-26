@@ -11,7 +11,7 @@ export default function PageHeader({
 }) {
   return (
     <div style={{ marginBottom: 28 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: description ? 6 : 0 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: description ? 6 : undefined }}>
         <div
           style={{
             width: 3,
