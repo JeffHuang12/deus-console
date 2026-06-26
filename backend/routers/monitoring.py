@@ -1,68 +1,47 @@
-"""頁三:監測中心 — 監測規則 CRUD。
+"""監測中心 — 監測規則 CRUD。
 
-本期用記憶體暫存(重啟即還原)。Phase 2 改持久化,並由排程定時讀 BigQuery 比對門檻後告警。
+Phase 2 改由排程定時讀 BigQuery 比對門檻後告警。
 """
 
 from __future__ import annotations
 
 from datetime import datetime
-from itertools import count
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 
+from db import db
+from exceptions import not_found
 from schemas import MonitorRule, MonitorRuleCreate
 
 router = APIRouter(prefix="/monitoring", tags=["monitoring"])
 
-_rules: dict[int, MonitorRule] = {}
-_id_seq = count(1)
 
-
-def _seed() -> None:
-    """放一筆範例規則,方便前端一進頁面就看到列表。"""
-    rid = next(_id_seq)
-    _rules[rid] = MonitorRule(
-        id=rid,
-        metric="roas",
-        comparator="lt",
-        threshold=2.0,
-        notify="email",
-        enabled=True,
-        created_at=datetime.now(),
-    )
-
-
-_seed()
+def _row_to_rule(row: dict) -> MonitorRule:
+    row["enabled"] = bool(row["enabled"])
+    return MonitorRule(**row)
 
 
 @router.get("/rules", response_model=list[MonitorRule])
 def list_rules() -> list[MonitorRule]:
-    return list(_rules.values())
+    return [_row_to_rule(r) for r in db.list_rules()]
 
 
 @router.post("/rules", response_model=MonitorRule)
 def create_rule(payload: MonitorRuleCreate) -> MonitorRule:
-    rid = next(_id_seq)
-    rule = MonitorRule(id=rid, created_at=datetime.now(), **payload.model_dump())
-    _rules[rid] = rule
-    return rule
+    row = db.create_rule(payload.model_dump())
+    return _row_to_rule(row)
 
 
 @router.put("/rules/{rule_id}", response_model=MonitorRule)
 def update_rule(rule_id: int, payload: MonitorRuleCreate) -> MonitorRule:
-    if rule_id not in _rules:
-        raise HTTPException(status_code=404, detail="規則不存在")
-    existing = _rules[rule_id]
-    updated = MonitorRule(
-        id=rule_id, created_at=existing.created_at, **payload.model_dump()
-    )
-    _rules[rule_id] = updated
-    return updated
+    row = db.update_rule(rule_id, payload.model_dump())
+    if row is None:
+        not_found("規則")
+    return _row_to_rule(row)
 
 
 @router.delete("/rules/{rule_id}")
 def delete_rule(rule_id: int) -> dict:
-    if rule_id not in _rules:
-        raise HTTPException(status_code=404, detail="規則不存在")
-    del _rules[rule_id]
+    if not db.delete_rule(rule_id):
+        not_found("規則")
     return {"deleted": rule_id}

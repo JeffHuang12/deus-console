@@ -270,3 +270,68 @@ export const NL_EXAMPLES = [
   "VIP 以上但未訂閱行銷 Email 的會員",
   "購物金餘額大於 0 且非黑名單的客人",
 ];
+
+// --- Lookalike（類似受眾）平台設定 ---
+// 各平台範圍語意不同：Meta/LINE 用百分比 slider,Google 用三段式。
+export interface LookalikeConfig {
+  key: "meta" | "google" | "line";
+  name: string;
+  mode: "slider" | "segments";
+  min?: number;
+  max?: number;
+  defaultRatio?: number;
+  note: string;
+  segments?: { label: string; value: string; hint: string }[];
+  allowAuto?: boolean;
+}
+
+export const LOOKALIKE_CONFIG: LookalikeConfig[] = [
+  {
+    key: "meta",
+    name: "Meta 類似受眾",
+    mode: "slider",
+    min: 1,
+    max: 10,
+    defaultRatio: 1,
+    note: "1% 代表目標國家內輪廓最相近的受眾(精準度最高),10% 範圍最廣。",
+  },
+  {
+    key: "google",
+    name: "Google 類似區隔",
+    mode: "segments",
+    segments: [
+      { label: "NARROW", value: "NARROW", hint: "約涵蓋目標地區 2.5% 用戶(最精準)" },
+      { label: "BALANCED", value: "BALANCED", hint: "約 5%" },
+      { label: "BROAD", value: "BROAD", hint: "約 10%(最廣)" },
+    ],
+    note: "Google 以三段式控制相似受眾規模。",
+  },
+  {
+    key: "line",
+    name: "LINE 類似受眾",
+    mode: "slider",
+    min: 1,
+    max: 15,
+    defaultRatio: 1,
+    allowAuto: true,
+    note: "1%–15% 設定範圍;「自動」交由 LAP 系統動態評估最佳受眾規模。",
+  },
+];
+
+// 目標市場/國家(類似受眾按國家計算)
+export const LOOKALIKE_MARKETS = [
+  { label: "台灣", value: "TW" },
+  { label: "香港", value: "HK" },
+  { label: "日本", value: "JP" },
+  { label: "馬來西亞", value: "MY" },
+  { label: "新加坡", value: "SG" },
+];
+
+// 種子類型(合併「高 LTV 客戶」與「預測型高 LTV 新客」)
+export const LOOKALIKE_SEED_TYPES = [
+  { label: "高 LTV 客戶(既有名單為種子)", value: "high_ltv" },
+  { label: "預測高 LTV 新客(ML 預測機率為種子)", value: "predicted_ltv" },
+];
+
+// --- 有官方資料查詢 MCP 的資料源(綁定頁標「支援 AI 查詢」) ---
+export const OFFICIAL_MCP = new Set(["ga4", "google_ads", "meta_ads", "search_console"]);

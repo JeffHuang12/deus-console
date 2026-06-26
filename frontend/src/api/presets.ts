@@ -8,6 +8,18 @@ export const MODELS = [
   { value: "claude-haiku-4-5-20251001", label: "Claude Haiku 4.5（快速）" },
 ];
 
+// GA4 查詢頁可選的模型(Claude + Gemini)。預設 Haiku 省 token。
+// Gemini 需在 .env 設 GEMINI_API_KEY。
+export const GA4_MODELS = [
+  { value: "claude-haiku-4-5-20251001", label: "Claude Haiku 4.5（快速省）" },
+  { value: "claude-sonnet-4-6", label: "Claude Sonnet 4.6（均衡）" },
+  { value: "claude-opus-4-8", label: "Claude Opus 4.8（最強最貴）" },
+  { value: "gemini-2.5-flash", label: "Gemini 2.5 Flash（快速省）" },
+  { value: "gemini-2.5-pro", label: "Gemini 2.5 Pro（最強）" },
+];
+
+export const GA4_DEFAULT_MODEL = "claude-haiku-4-5-20251001";
+
 // 快速日期選項。
 export const DATE_PRESETS: { value: DatePreset; label: string }[] = [
   { value: "last_7d", label: "過去 7 天" },
