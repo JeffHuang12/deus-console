@@ -45,7 +45,7 @@ import ProductAssociationsPage from "./pages/ProductAssociationsPage";
 import CreativeFatiguePage from "./pages/CreativeFatiguePage";
 import NotificationsPage from "./pages/NotificationsPage";
 
-const { Header, Sider, Content } = Layout;
+const { Sider, Content } = Layout;
 
 // 選單分組（antd Menu children）。頁數變多後以分組維持可讀性。
 const MENU: MenuProps["items"] = [
@@ -143,16 +143,59 @@ export default function App() {
   return (
     <Layout style={{ minHeight: "100vh" }}>
       <Sider theme="dark" breakpoint="lg" collapsedWidth="0" width={220}>
+        {/* Brand mark */}
         <div
           style={{
-            color: "#fff",
-            fontSize: 18,
-            fontWeight: 600,
-            padding: "16px 24px",
+            padding: "18px 20px 14px",
+            borderBottom: "1px solid rgba(255,255,255,0.06)",
           }}
         >
-          DEUS 數據平台
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div
+              style={{
+                width: 28,
+                height: 28,
+                background: "var(--color-primary)",
+                borderRadius: 6,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flexShrink: 0,
+                fontSize: 13,
+                fontWeight: 700,
+                color: "#fff",
+                letterSpacing: "-0.5px",
+              }}
+            >
+              D
+            </div>
+            <div>
+              <div
+                style={{
+                  color: "#F1F5F9",
+                  fontSize: 14,
+                  fontWeight: 600,
+                  lineHeight: 1.25,
+                  letterSpacing: "0.04em",
+                }}
+              >
+                DEUS
+              </div>
+              <div
+                style={{
+                  color: "#475569",
+                  fontSize: 10,
+                  lineHeight: 1.4,
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase",
+                }}
+              >
+                數據平台
+              </div>
+            </div>
+          </div>
         </div>
+
         <Menu
           theme="dark"
           mode="inline"
@@ -160,14 +203,10 @@ export default function App() {
           defaultOpenKeys={GROUP_KEYS}
           items={MENU}
           onClick={({ key }) => navigate(key)}
+          style={{ marginTop: 6 }}
         />
       </Sider>
       <Layout>
-        <Header style={{ background: "#fff", paddingInline: 24 }}>
-          <span style={{ fontSize: 16, fontWeight: 500 }}>
-            數據綁定與分析控制台
-          </span>
-        </Header>
         <Content style={{ margin: 24 }}>
           <Routes>
             <Route path="/" element={<Navigate to="/feature-catalog" replace />} />

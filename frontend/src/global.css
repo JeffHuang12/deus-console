@@ -1,0 +1,54 @@
+/* Design tokens — single source of truth for colors used in inline styles */
+:root {
+  --color-primary: #2563eb;
+}
+
+/* Global rendering & polish */
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Narrow scrollbar */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
+}
+
+/* Sidebar scrollbar */
+.ant-layout-sider ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+}
+.ant-layout-sider ::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+/* Numeric alignment in tables */
+.ant-table-cell {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Tighten Ant Design group title in dark sidebar */
+.ant-menu-dark .ant-menu-item-group-title {
+  font-size: 10px !important;
+  letter-spacing: 0.08em !important;
+  text-transform: uppercase !important;
+  padding-inline-start: 20px !important;
+  padding-top: 12px !important;
+  padding-bottom: 4px !important;
+}
